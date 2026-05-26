@@ -2,7 +2,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 
-from app.api.dependencies import EventBusDep, PlannerEngineDep, SessionStoreDep
+from app.api.dependencies import PlannerEngineDep, SessionStoreDep, WebSocketEventBusDep
 from app.memory.store import SessionNotFoundError
 from app.schemas.agent import (
     AgentStartResponse,
@@ -68,8 +68,18 @@ async def cancel_agent(session_id: str, engine: PlannerEngineDep) -> CancelAgent
 
 
 @router.websocket("/{session_id}/stream")
-async def stream_agent(session_id: str, websocket: WebSocket, events: EventBusDep) -> None:
+async def stream_agent(session_id: str, websocket: WebSocket, events: WebSocketEventBusDep) -> None:
     await websocket.accept()
+    await websocket.send_json(
+        {
+            "event": "planner_update",
+            "type": "state",
+            "state": "IDLE",
+            "step": 0,
+            "message": "Stream connected",
+            "session_id": session_id,
+        }
+    )
     queue = await events.subscribe(session_id)
     try:
         while True:
@@ -77,7 +87,16 @@ async def stream_agent(session_id: str, websocket: WebSocket, events: EventBusDe
                 event = await asyncio.wait_for(queue.get(), timeout=30)
                 await websocket.send_json(event.model_dump(mode="json"))
             except TimeoutError:
-                await websocket.send_json({"type": "heartbeat", "session_id": session_id})
+                await websocket.send_json(
+                    {
+                        "event": "heartbeat",
+                        "type": "heartbeat",
+                        "state": "IDLE",
+                        "step": 0,
+                        "message": "heartbeat",
+                        "session_id": session_id,
+                    }
+                )
     except WebSocketDisconnect:
         pass
     finally:

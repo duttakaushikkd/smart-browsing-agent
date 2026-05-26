@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
@@ -69,6 +70,13 @@ def create_app() -> FastAPI:
     limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit])
     app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
     app.state.limiter = limiter
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["*"],
+    )
     app.add_middleware(SlowAPIMiddleware)
     app.include_router(health_router)
     app.include_router(agent_router)

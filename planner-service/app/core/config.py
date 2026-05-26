@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     use_redis: bool = False
 
+    cors_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"]
+    )
+
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(
         default_factory=lambda: ["localhost", "127.0.0.1", "169.254.169.254", "::1"]
@@ -33,7 +37,7 @@ class Settings(BaseSettings):
     agent_step_timeout_seconds: float = 60.0
     rate_limit: str = "60/minute"
 
-    @field_validator("allowed_domains", "blocked_domains", mode="before")
+    @field_validator("allowed_domains", "blocked_domains", "cors_origins", mode="before")
     @classmethod
     def parse_csv_list(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):

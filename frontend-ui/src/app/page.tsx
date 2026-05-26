@@ -14,11 +14,17 @@ export default function Page() {
   const history = useAppStore((state) => state.history);
   const activeConversationId = useAppStore((state) => state.activeConversationId);
   const apiBaseUrl = useAppStore((state) => state.apiBaseUrl);
+  const cancelActiveSession = useAppStore((state) => state.cancelActiveSession);
+  const restoreSession = useAppStore((state) => state.restoreSession);
   const setQuery = useAppStore((state) => state.setQuery);
   const submit = useAppStore((state) => state.submit);
   const selectConversation = useAppStore((state) => state.selectConversation);
 
   const activeConversation = useActiveConversation();
+
+  useEffect(() => {
+    void restoreSession();
+  }, [restoreSession]);
 
   useEffect(() => {
     if (error && status !== "loading") {
@@ -49,6 +55,7 @@ export default function Page() {
                 if (error) useAppStore.getState().clearError();
               }}
               onSubmit={submit}
+              onCancel={() => void cancelActiveSession()}
               loading={status === "loading"}
             />
 

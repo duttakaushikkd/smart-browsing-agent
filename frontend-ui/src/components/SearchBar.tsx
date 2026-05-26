@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, LoaderCircle, Search } from "lucide-react";
+import { ArrowRight, LoaderCircle, Search, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ type SearchBarProps = {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  onCancel?: () => void;
   loading?: boolean;
   placeholder?: string;
   autoFocus?: boolean;
@@ -17,6 +18,7 @@ export function SearchBar({
   value,
   onChange,
   onSubmit,
+  onCancel,
   loading = false,
   placeholder = "Ask the AI browser anything...",
   autoFocus = true
@@ -62,6 +64,20 @@ export function SearchBar({
           {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
           <span>{loading ? "Thinking..." : "Submit"}</span>
         </button>
+
+        {loading && onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className={cn(
+              "inline-flex items-center justify-center gap-2 rounded-[1.5rem] border border-white/10 px-5 py-3 text-sm font-medium text-slate-200 transition duration-200",
+              "bg-white/5 hover:bg-white/10"
+            )}
+          >
+            <X className="h-4 w-4" />
+            <span>Cancel</span>
+          </button>
+        ) : null}
       </div>
     </form>
   );

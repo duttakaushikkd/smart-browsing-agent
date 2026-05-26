@@ -1,7 +1,7 @@
 import pytest
 
-from app.core.config import Settings
-from app.core.security import SecurityPolicyError, UrlPolicy
+from config.settings import Settings
+from security.url_policy import SecurityPolicyError, UrlPolicy
 
 
 def test_url_policy_blocks_private_hosts() -> None:

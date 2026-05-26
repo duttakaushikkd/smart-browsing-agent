@@ -7,9 +7,19 @@ services:
       - "8000:8000"
     depends_on:
       - redis
+      - mcp-tool-server
     environment:
       USE_REDIS: "true"
       REDIS_URL: redis://redis:6379/0
+      MCP_SERVER_URL: http://mcp-tool-server:9000
+
+  mcp-tool-server:
+    build: ../mcp
+    env_file:
+      - ../mcp/.env
+    ports:
+      - "9000:9000"
+    environment:
       BROWSER_SERVICE_URL: http://host.docker.internal:8080
 
   redis:

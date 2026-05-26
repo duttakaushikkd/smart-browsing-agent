@@ -1,0 +1,9 @@
+services:
+  mcp-tool-server:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+    environment:
+      BROWSER_SERVICE_URL: http://host.docker.internal:8080

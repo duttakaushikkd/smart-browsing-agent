@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from app.core.config import Settings
+from config.settings import Settings
 
 
 class SecurityPolicyError(ValueError):

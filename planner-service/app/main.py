@@ -15,15 +15,13 @@ from app.api.health import router as health_router
 from app.api.routes import router as agent_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.core.security import UrlPolicy
 from app.memory.store import InMemorySessionStore, RedisSessionStore, SessionStore
 from app.memory.summarizer import MemorySummarizer
 from app.planner.engine import PlannerEngine
 from app.planner.llm import create_planner_model
-from app.planner.tools import ToolRegistry, create_browser_api_tools
 from app.recovery.engine import RecoveryEngine
-from app.services.browser_client import BrowserServiceClient
 from app.streaming.event_bus import EventBus
+from app.services.mcp_client import McpClient, McpToolExecutor
 
 logger = structlog.get_logger(__name__)
 
@@ -42,25 +40,28 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         store = InMemorySessionStore()
 
-    browser_client = BrowserServiceClient(
-        base_url=settings.browser_service_url,
-        timeout_seconds=settings.browser_timeout_seconds,
+    mcp_client = McpClient(
+        base_url=settings.mcp_server_url,
+        timeout_seconds=settings.mcp_timeout_seconds,
+        max_retries=settings.mcp_max_retries,
     )
+    await mcp_client.get_tool_schemas(refresh=True)
     event_bus = EventBus()
-    tools = ToolRegistry(create_browser_api_tools(browser_client, UrlPolicy(settings)))
+    executor = McpToolExecutor(mcp_client)
     app.state.session_store = store
     app.state.event_bus = event_bus
     app.state.planner_engine = PlannerEngine(
         settings=settings,
         store=store,
         model=create_planner_model(settings),
-        tool_registry=tools,
+        tool_executor=executor,
         events=event_bus,
         summarizer=MemorySummarizer(),
         recovery=RecoveryEngine(),
     )
     logger.info("planner_service_started", environment=settings.environment)
     yield
+    await mcp_client.aclose()
     if app.state.redis:
         await app.state.redis.aclose()
 

@@ -3,13 +3,11 @@ from typing import Any
 from uuid import uuid4
 
 import structlog
-from pydantic import ValidationError
-
 from app.core.config import Settings
 from app.memory.store import SessionStore
 from app.memory.summarizer import MemorySummarizer
 from app.planner.llm import PlannerModel
-from app.planner.tools import ToolExecutionContext, ToolNotFoundError, ToolRegistry
+from app.services.mcp_client import ToolExecutionContext
 from app.recovery.engine import RecoveryEngine
 from app.schemas.events import StreamEvent, StreamEventType
 from app.schemas.state import (
@@ -21,6 +19,7 @@ from app.schemas.state import (
 )
 from app.schemas.tools import ToolResult
 from app.streaming.event_bus import EventBus
+from app.services.mcp_client import McpToolExecutor
 
 logger = structlog.get_logger(__name__)
 
@@ -33,7 +32,7 @@ class PlannerEngine:
         settings: Settings,
         store: SessionStore,
         model: PlannerModel,
-        tool_registry: ToolRegistry,
+        tool_executor: McpToolExecutor,
         events: EventBus,
         summarizer: MemorySummarizer,
         recovery: RecoveryEngine,
@@ -41,7 +40,7 @@ class PlannerEngine:
         self._settings = settings
         self._store = store
         self._model = model
-        self._tools = tool_registry
+        self._tools = tool_executor
         self._events = events
         self._summarizer = summarizer
         self._recovery = recovery
@@ -226,8 +225,6 @@ class PlannerEngine:
                 arguments,
                 ToolExecutionContext(session_id=session.session_id),
             )
-        except (ToolNotFoundError, ValidationError, ValueError) as exc:
-            return ToolResult(success=False, error=str(exc), metadata={"recoverable": True})
         except Exception as exc:
             logger.exception("tool_execution_failed", session_id=session.session_id, tool=tool_name)
             return ToolResult(success=False, error=str(exc), metadata={"recoverable": True})

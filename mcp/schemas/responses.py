@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class ToolResult(BaseModel):
-    """Normalized tool response returned from the remote MCP tool server."""
+    """Normalized tool response envelope."""
 
     success: bool
     data: dict[str, Any] = Field(default_factory=dict)

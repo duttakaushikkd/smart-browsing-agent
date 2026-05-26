@@ -1,6 +1,8 @@
 from collections.abc import Iterator
 
+import httpx
 import pytest
+import respx
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -8,8 +10,12 @@ from app.main import create_app
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
-    with TestClient(create_app()) as test_client:
-        yield test_client
+    with respx.mock:
+        respx.get("http://localhost:9000/v1/tools/schemas").mock(
+            return_value=httpx.Response(200, json={"schemas": []})
+        )
+        with TestClient(create_app()) as test_client:
+            yield test_client
 
 
 def test_health(client: TestClient) -> None:

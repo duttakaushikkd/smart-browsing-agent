@@ -10,6 +10,7 @@ def main() -> None:
         host=settings.host,
         port=settings.port,
         reload=settings.environment == "local",
+        reload_excludes=[".venv/*", "**/__pycache__/*"],
     )
 
 

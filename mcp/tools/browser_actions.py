@@ -28,6 +28,7 @@ from schemas import (
     TypeTextPayload,
     UploadFilePayload,
     WaitForElementPayload,
+    SearchPayload,
 )
 from security.url_policy import UrlPolicy
 from security.validation import sanitize_payload, validate_open_url_payload
@@ -170,3 +171,20 @@ ExecuteJavaScriptTool = _tool_class(
     "Execute bounded custom JavaScript in current page context.",
     ExecuteJavaScriptPayload,
 )
+
+
+class SearchWebTool(BaseTool[SearchPayload]):
+    name = "search_web"
+    description = "Search the web via the browser search engine."
+    input_schema = SearchPayload
+
+    def __init__(self, client: BrowserServiceClient) -> None:
+        self._client = client
+
+    async def execute(self, context: ToolExecutionContext, payload: SearchPayload) -> ToolResult:
+        return await self._client.execute_search(
+            session_id=context.session_id,
+            query=payload.query,
+            correlation_id=context.correlation_id,
+        )
+

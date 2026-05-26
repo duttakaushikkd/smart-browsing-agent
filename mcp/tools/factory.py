@@ -26,6 +26,7 @@ from tools.browser_actions import (
     TypeTextTool,
     UploadFileTool,
     WaitForElementTool,
+    SearchWebTool,
 )
 
 
@@ -53,6 +54,7 @@ def create_browser_tools(client: BrowserServiceClient, url_policy: UrlPolicy) ->
         ExtractLinksTool(client),
         ExtractTablesTool(client),
         ExecuteJavaScriptTool(client),
+        SearchWebTool(client),
     ]
 
 

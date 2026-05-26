@@ -27,6 +27,7 @@ from schemas.payloads import (
     TypeTextPayload,
     UploadFilePayload,
     WaitForElementPayload,
+    SearchPayload,
 )
 from schemas.responses import ToolResult
 
@@ -58,4 +59,5 @@ __all__ = [
     "TypeTextPayload",
     "UploadFilePayload",
     "WaitForElementPayload",
+    "SearchPayload",
 ]

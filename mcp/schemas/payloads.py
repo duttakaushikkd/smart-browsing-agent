@@ -129,3 +129,7 @@ class ExecuteJavaScriptPayload(BaseModel):
         if "\x00" in v:
             raise ValueError("script must not contain null bytes")
         return v
+
+
+class SearchPayload(BaseModel):
+    query: str = Field(description="Search query string.")

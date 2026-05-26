@@ -97,3 +97,82 @@ class BrowserServiceClient:
             correlation_id=correlation_id,
         )
         return parsed
+
+    @retry(
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.TransportError)),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.25, min=0.25, max=2.0),
+        reraise=True,
+    )
+    async def execute_search(
+        self,
+        session_id: str,
+        query: str,
+        *,
+        correlation_id: str | None = None,
+    ) -> ToolResult:
+        validate_session_id(session_id)
+        request_body = {
+            "session_id": session_id,
+            "query": query,
+        }
+        headers: dict[str, str] = {}
+        if correlation_id:
+            headers["X-Correlation-ID"] = correlation_id
+
+        self._breaker.before_call()
+        started = time.perf_counter()
+        try:
+            response = await self._client.post(
+                "/browser/search",
+                json=request_body,
+                headers=headers,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            self._breaker.record_failure()
+            raise BrowserServiceError(
+                f"Browser service HTTP {exc.response.status_code}: {exc.response.text}"
+            ) from exc
+        except Exception:
+            self._breaker.record_failure()
+            raise
+
+        self._breaker.record_success()
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        try:
+            resp_data = response.json()
+        except ValueError as exc:
+            raise BrowserServiceError("Invalid browser service response") from exc
+
+        success = resp_data.get("success", False)
+        observation = resp_data.get("observation") or {}
+        results = resp_data.get("results") or []
+
+        normalized_data = {
+            "page_title": observation.get("page_title") or observation.get("title") or "Search Results",
+            "visible_elements": observation.get("visible_elements") or [],
+            "search_results": results,
+        }
+
+        parsed = ToolResult(
+            success=success,
+            data=normalized_data,
+            error=resp_data.get("error"),
+            metadata={
+                "execution_time_ms": elapsed_ms,
+                "action": "search_web",
+                "correlation_id": correlation_id,
+            },
+        )
+
+        logger.info(
+            "browser_search_executed",
+            query=query,
+            session_id=session_id,
+            success=parsed.success,
+            execution_time_ms=elapsed_ms,
+            correlation_id=correlation_id,
+        )
+        return parsed
+

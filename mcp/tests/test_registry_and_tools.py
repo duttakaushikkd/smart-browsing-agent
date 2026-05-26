@@ -25,6 +25,16 @@ class FakeBrowserServiceClient:
         self.calls.append((session_id, action, payload, correlation_id))
         return ToolResult(success=True, data={"ok": True})
 
+    async def execute_search(
+        self,
+        session_id: str,
+        query: str,
+        *,
+        correlation_id: str | None = None,
+    ) -> ToolResult:
+        self.calls.append((session_id, "search_web", {"query": query}, correlation_id))
+        return ToolResult(success=True, data={"ok": True})
+
 
 def _payloads() -> dict[str, dict[str, Any]]:
     return {
@@ -48,6 +58,7 @@ def _payloads() -> dict[str, dict[str, Any]]:
         "extract_links": {},
         "extract_tables": {},
         "execute_javascript": {"script": "return 1;"},
+        "search_web": {"query": "MacBook Air"},
     }
 
 

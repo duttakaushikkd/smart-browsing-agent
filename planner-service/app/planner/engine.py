@@ -168,6 +168,7 @@ class PlannerEngine:
             await self._fail(session, "Anti-loop protection triggered for repeated tool calls")
             return
 
+        correlation_id = str(uuid4())
         session.transition(
             AgentState.EXECUTING,
             f"Executing {decision.tool_name}",
@@ -179,10 +180,10 @@ class PlannerEngine:
             session,
             StreamEventType.ACTION,
             decision.summary,
-            {"tool": decision.tool_name, "arguments": arguments},
+            {"tool": decision.tool_name, "arguments": arguments, "correlation_id": correlation_id},
         )
 
-        result = await self._execute_tool(session, decision.tool_name, arguments)
+        result = await self._execute_tool(session, decision.tool_name, arguments, correlation_id)
         session.current_step += 1
         session.action_history.append(
             ActionRecord(
@@ -199,7 +200,7 @@ class PlannerEngine:
                 step=session.current_step,
                 content=observation,
                 elements=self._elements_from_result(result),
-                metadata=result.metadata | {"tool": decision.tool_name},
+                metadata=result.metadata | {"tool": decision.tool_name, "correlation_id": correlation_id},
             )
         )
         session.transition(AgentState.OBSERVING, "Observed browser result")
@@ -218,15 +219,16 @@ class PlannerEngine:
         session: AgentSession,
         tool_name: str,
         arguments: dict[str, Any],
+        correlation_id: str,
     ) -> ToolResult:
         try:
             return await self._tools.execute(
                 tool_name,
                 arguments,
-                ToolExecutionContext(session_id=session.session_id),
+                ToolExecutionContext(session_id=session.session_id, correlation_id=correlation_id),
             )
         except Exception as exc:
-            logger.exception("tool_execution_failed", session_id=session.session_id, tool=tool_name)
+            logger.exception("tool_execution_failed", session_id=session.session_id, tool=tool_name, correlation_id=correlation_id)
             return ToolResult(success=False, error=str(exc), metadata={"recoverable": True})
 
     def _observation_from_result(self, result: ToolResult) -> str:
